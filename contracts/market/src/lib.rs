@@ -53,6 +53,7 @@ pub enum DataKey {
     JobCounter,
     RegistryContract,
     Admin,
+    IsPaused
 }
 
 #[contractevent]
@@ -117,6 +118,11 @@ pub struct AdminTransferred {
     pub new_admin: Address,
 }
 
+#[contractevent]
+pub struct PauseStateChanged {
+    pub paused: bool
+}
+
 #[contract]
 pub struct MarketContract;
 
@@ -133,6 +139,7 @@ impl MarketContract {
             .instance()
             .set(&DataKey::RegistryContract, &registry_contract);
         env.storage().instance().set(&DataKey::Admin, admin);
+        env.storage().instance().set(&DataKey::IsPaused, &false);
     }
 
     pub fn create_job(env: Env, finder: Address, token: Address, amount: i128) -> u64 {
@@ -447,6 +454,23 @@ impl MarketContract {
         env.storage().instance().set(&DataKey::Admin, &new_admin);
 
         AdminTransferred { new_admin }.publish(&env);
+    }
+
+    pub fn toggle_contract_pause(env: Env, admin: Address) {
+        admin.require_auth();
+
+        let current_admin: Address = env.storage().instance().get(&DataKey::Admin).expect("Admin not set");
+        assert!(admin == current_admin, "Unauthorized caller");
+
+        let paused: bool = env.storage().instance().get(&DataKey::IsPaused).expect("Pause state not set");
+
+        if paused {
+            env.storage().instance().set(&DataKey::IsPaused, &false);
+        } else {
+            env.storage().instance().set(&DataKey::IsPaused, &true);
+        }
+
+        PauseStateChanged { paused }.publish(&env);
     }
 }
 
