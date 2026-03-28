@@ -133,6 +133,13 @@ pub struct PauseStateChanged {
     pub paused: bool,
 }
 
+#[contractevent]
+pub struct EmergencyWithdraw {
+    pub token: Address,
+    pub amount: i128,
+    pub to: Address,
+}
+
 #[contract]
 pub struct MarketContract;
 
@@ -537,6 +544,24 @@ impl MarketContract {
         }
 
         PauseStateChanged { paused }.publish(&env);
+    }
+
+    pub fn emergency_withdraw(env: Env, admin: Address, token: Address, amount: i128, to: Address) {
+        admin.require_auth();
+
+        let current_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Admin not set");
+        assert!(admin == current_admin, "Unauthorized caller");
+
+        assert!(is_paused(&env), "Contract is not paused");
+
+        let token_client = token::TokenClient::new(&env, &token);
+        token_client.transfer(&env.current_contract_address(), &to, &amount);
+
+        EmergencyWithdraw { token, amount, to }.publish(&env);
     }
 }
 
