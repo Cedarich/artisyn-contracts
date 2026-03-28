@@ -1513,8 +1513,7 @@ fn test_transfer_admin_blocked_when_paused() {
 
 // ── upgrade tests ─────────────────────────────────────────────────────
 
-const MARKET_WASM: &[u8] =
-    include_bytes!("../../../target/wasm32v1-none/release/market.wasm");
+const MARKET_WASM: &[u8] = include_bytes!("../../../target/wasm32v1-none/release/market.wasm");
 
 #[test]
 fn test_upgrade_success() {

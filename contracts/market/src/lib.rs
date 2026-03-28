@@ -554,9 +554,13 @@ impl MarketContract {
             .expect("Admin not set");
         assert!(admin == current_admin, "Unauthorized caller");
 
-        env.deployer().update_current_contract_wasm(new_wasm_hash.clone());
+        env.deployer()
+            .update_current_contract_wasm(new_wasm_hash.clone());
 
-        ContractUpgraded { hash: new_wasm_hash }.publish(&env);
+        ContractUpgraded {
+            hash: new_wasm_hash,
+        }
+        .publish(&env);
     }
 }
 
