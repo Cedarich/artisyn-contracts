@@ -411,3 +411,35 @@ fn test_transfer_admin_old_admin_cannot_transfer_again() {
     // old admin tries to reclaim — must fail
     client.transfer_admin(&admin, &admin);
 }
+
+#[test]
+fn test_transfer_admin_get_admin_reflects_new_admin() {
+    let (env, _contract_id, client) = setup_env();
+    let admin = Address::generate(&env);
+    let new_admin = Address::generate(&env);
+    env.mock_all_auths();
+
+    client.initialize(&admin);
+    assert_eq!(client.get_admin(), admin);
+
+    client.transfer_admin(&admin, &new_admin);
+    assert_eq!(client.get_admin(), new_admin);
+}
+
+#[test]
+fn test_transfer_admin_emits_event() {
+    let (env, contract_id, client) = setup_env();
+    let admin = Address::generate(&env);
+    let new_admin = Address::generate(&env);
+    env.mock_all_auths();
+
+    client.initialize(&admin);
+    client.transfer_admin(&admin, &new_admin);
+
+    let events = env.events().all();
+    let registry_event_count = events.iter().filter(|e| e.0 == contract_id).count();
+    assert!(
+        registry_event_count >= 1,
+        "Expected AdminTransferred event to be emitted"
+    );
+}
