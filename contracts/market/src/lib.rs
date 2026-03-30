@@ -58,6 +58,7 @@ pub enum DataKey {
     RegistryContract,
     Admin,
     IsPaused,
+    PlatformFee,
 }
 
 #[contractevent]
@@ -143,6 +144,17 @@ pub struct EmergencyWithdraw {
 #[contractevent]
 pub struct ContractUpgraded {
     pub hash: BytesN<32>,
+}
+
+#[contractevent]
+pub struct FeeUpdated {
+    pub new_fee_bps: u32,
+}
+
+#[contractevent]
+pub struct JurorAssigned {
+    pub id: u64,
+    pub juror: Address,
 }
 
 #[contract]
@@ -634,6 +646,63 @@ impl MarketContract {
             hash: new_wasm_hash,
         }
         .publish(&env);
+    }
+
+    pub fn set_platform_fee(env: Env, admin: Address, fee_bps: u32) {
+        admin.require_auth();
+
+        let current_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Admin not set");
+        assert!(admin == current_admin, "Unauthorized caller");
+
+        assert!(fee_bps <= 1000, "Fee exceeds maximum allowed (1000 bps)");
+
+        env.storage()
+            .instance()
+            .set(&DataKey::PlatformFee, &fee_bps);
+
+        FeeUpdated {
+            new_fee_bps: fee_bps,
+        }
+        .publish(&env);
+    }
+
+    pub fn assign_juror(env: Env, admin: Address, job_id: u64, juror: Address) {
+        admin.require_auth();
+
+        let current_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Admin not set");
+        assert!(admin == current_admin, "Unauthorized caller");
+
+        let registry_contract: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::RegistryContract)
+            .expect("Contract not initialized");
+
+        let mut job: Job = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Job(job_id))
+            .expect("Job not found");
+
+        assert!(job.status == JobStatus::Disputed, "Job is not disputed");
+
+        let registry_client = registry::Client::new(&env, &registry_contract);
+        let profile = registry_client.get_profile(&juror);
+
+        assert!(profile.role == 1, "User is not a Curator");
+
+        job.juror = Some(juror.clone());
+        env.storage().persistent().set(&DataKey::Job(job_id), &job);
+
+        JurorAssigned { id: job_id, juror }.publish(&env);
     }
 }
 
