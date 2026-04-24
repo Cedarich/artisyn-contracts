@@ -67,7 +67,9 @@ fn read_profile(env: &Env, user: &Address) -> Option<Profile> {
     let key = DataKey::Profile(user.clone());
     let profile = env.storage().persistent().get(&key);
     if profile.is_some() {
-        env.storage().persistent().extend_ttl(&key, 100_000, 500_000);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, 100_000, 500_000);
     }
     profile
 }
@@ -75,7 +77,9 @@ fn read_profile(env: &Env, user: &Address) -> Option<Profile> {
 fn write_profile(env: &Env, user: &Address, profile: &Profile) {
     let key = DataKey::Profile(user.clone());
     env.storage().persistent().set(&key, profile);
-    env.storage().persistent().extend_ttl(&key, 100_000, 500_000);
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, 100_000, 500_000);
 }
 
 fn read_admin(env: &Env) -> Option<Address> {
